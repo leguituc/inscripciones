@@ -1,0 +1,38 @@
+<?php
+
+namespace App\Models;
+
+use App\Traits\HasHashId;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class DatoPersonal extends Model
+{
+    use HasFactory;
+    use HasHashId;
+
+    protected $table = "insc_datos_personales";
+
+    protected $fillable = [
+        'user_id',
+        'dni',
+        'convenio_id',
+        'genero_id',
+        'nacimiento',
+        'nacionalidad_id',
+        'estado_civil_id',
+        'fecha_acta',
+        'estudios_id',
+        'ocupacion',
+        'trabajo',
+        'ingresos',
+        'total_ingresos',
+        'codigo'
+    ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+}
