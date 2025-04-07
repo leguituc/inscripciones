@@ -52,7 +52,7 @@
 }
 
 [data-flux-label] {
-    @apply  !mb-0 !leading-tight;
+    @apply !mb-0 !leading-tight;
 }
 
 input:focus[data-flux-control],
@@ -64,3 +64,31 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+.tabla {
+    @apply my-3 w-full overflow-hidden rounded-lg;
+}
+
+.tabla table {
+    @apply w-full border dark:border-zinc-500 border-collapse;
+}
+
+.tabla td, .tabla th {
+    @apply p-2;
+}
+.tabla thead {
+    @apply bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 font-semibold;
+}
+.tabla tbody tr:nth-child(odd) {
+    @apply bg-zinc-100 dark:bg-zinc-800;
+    /* Filas impares */
+}
+
+.tabla tbody tr:nth-child(even) {
+    @apply bg-white dark:bg-zinc-900;
+    /* Filas pares */
+}
+
+.tabla tbody tr:hover {
+    @apply bg-zinc-200 dark:bg-zinc-700;
+    /* Hover */
+}

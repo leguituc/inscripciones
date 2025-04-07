@@ -35,7 +35,7 @@ return [
             'url' => env('DB_URL'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '3306'),
-            'database' => env('APP_ENV') === 'local' ? env('DB_DATABASE_LOCAL', 'legui') : env('DB_DATABASE_PRODUCCION', 'admin'),
+            'database' => env('APP_ENV') === 'local' ? env('DB_DATABASE_LOCAL') : env('DB_DATABASE_PRODUCCION'),
             'username' => env('DB_USERNAME', 'root'),
             'password' => env('DB_PASSWORD', ''),
             'unix_socket' => env('DB_SOCKET', ''),
