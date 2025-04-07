@@ -10,7 +10,7 @@
         <input type="text"
                x-model="filtro"
                wire:model.defer="filtro"
-               class="px-2 py-3 border border-sky-300 dark:outline-none dark:border-zinc-500 focus:border-sky-500 dark:focus:border-zinc-200 focus:ring-sky-300 dark:focus:ring-zinc-500 rounded-md
+               class="px-2 py-2 border border-sky-300 dark:outline-none dark:border-zinc-500 focus:border-sky-500 dark:focus:border-zinc-200 focus:ring-sky-300 dark:focus:ring-zinc-500 rounded-md
                shadow-sm text-sky-900 dark:text-zinc-200 dark:placeholder-zinc-500 font-bold pr-8"
                placeholder="Buscar"/>
 

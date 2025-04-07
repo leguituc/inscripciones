@@ -6,6 +6,7 @@ use App\Traits\HasHashId;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DatoPersonal extends Model
 {
@@ -34,5 +35,10 @@ class DatoPersonal extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function parientes(): HasMany
+    {
+        return $this->hasMany(Pariente::class, 'titular_id', 'id');
     }
 }

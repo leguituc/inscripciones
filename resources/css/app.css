@@ -75,9 +75,11 @@ select:focus[data-flux-control] {
 .tabla td, .tabla th {
     @apply p-2;
 }
+
 .tabla thead {
     @apply bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 font-semibold;
 }
+
 .tabla tbody tr:nth-child(odd) {
     @apply bg-zinc-100 dark:bg-zinc-800;
     /* Filas impares */
@@ -91,4 +93,12 @@ select:focus[data-flux-control] {
 .tabla tbody tr:hover {
     @apply bg-zinc-200 dark:bg-zinc-700;
     /* Hover */
+}
+
+.tabla .contador {
+    @apply cursor-pointer dark:bg-zinc-800 dark:hover:bg-zinc-700 px-2 rounded border dark:border-zinc-500;
+}
+
+.recuadro {
+    @apply my-3 dark:bg-zinc-950 p-4 rounded-lg;
 }
