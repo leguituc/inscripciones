@@ -61,4 +61,9 @@ class User extends Authenticatable
             ->map(fn(string $apellido) => Str::of($apellido)->substr(0, 1))
             ->implode('');
     }
+
+    public function nombreCompleto(): string
+    {
+        return $this->nombre . ' ' . $this->apellido;
+    }
 }
