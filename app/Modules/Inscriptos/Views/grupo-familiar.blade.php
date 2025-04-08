@@ -3,10 +3,12 @@
         :sub-titulo="'TITULAR: '. mb_strtoupper($inscripto->user->nombreCompleto())"
     >Grupo Familiar ({{ $parientes->count() + 1 }})
         <x-slot:botones>
-            <x-boton-volver texto="Volver a Inscriptos"/>
+            <x-boton-volver texto="Inscriptos" wire:click="volver"/>
         </x-slot:botones>
     </x-cabecera>
 
+    <pre>{{ $inscripto }}</pre>
+    <pre>{{ $inscripto->user }}</pre>
     <div class="recuadro">
         @foreach($parientes as $pariente)
             <div class="my-3 border dark:border-yellow-100 rounded p-4 grid grid-cols-1 md:grid-cols-4 gap-4">

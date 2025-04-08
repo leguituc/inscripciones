@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DatoPersonal extends Model
 {
@@ -35,6 +36,16 @@ class DatoPersonal extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function contacto(): HasOne
+    {
+        return $this->hasOne(DatoContacto::class, 'titular_id', 'id');
+    }
+
+    public function convenio(): BelongsTo
+    {
+        return $this->belongsTo(Convenio::class);
     }
 
     public function parientes(): HasMany

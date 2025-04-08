@@ -28,4 +28,9 @@ class GrupoFamiliar extends Component
         $query->where('titular_id', $this->inscripto->id);
         return $query->paginate(10);
     }
+
+    public function volver()
+    {
+        $this->redirectRoute('admin.inscriptos', navigate: true);
+    }
 }
