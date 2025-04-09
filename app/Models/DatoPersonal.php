@@ -35,7 +35,7 @@ class DatoPersonal extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class,'user_id','id');
     }
 
     public function contacto(): HasOne
@@ -45,11 +45,12 @@ class DatoPersonal extends Model
 
     public function convenio(): BelongsTo
     {
-        return $this->belongsTo(Convenio::class);
+        return $this->belongsTo(Convenio::class, 'convenio_id', 'id');
     }
 
     public function parientes(): HasMany
     {
         return $this->hasMany(Pariente::class, 'titular_id', 'id');
     }
+
 }
