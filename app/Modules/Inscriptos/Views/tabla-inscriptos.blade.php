@@ -10,6 +10,7 @@
                 <th class="text-center">Grupo Familiar</th>
                 <th class="text-center">Convenio</th>
                 <th class="text-center">Departamento</th>
+                <th class="text-right">Ingresos Totales</th>
                 <th></th>
             </tr>
             </thead>
@@ -19,17 +20,15 @@
                     <td class="text-center">{{ $inscripto->user_id }}</td>
                     <td class="text-left">{!! $this->resaltar(mb_strtoupper($inscripto->user->apellido)) !!}</td>
                     <td class="text-left">{!! $this->resaltar(mb_strtoupper($inscripto->user->nombre)) !!}</td>
-                    <td class="text-center">{!! $this->resaltar($inscripto->dni) !!}</td>
+                    <td class="text-center">{!! $this->resaltar($inscripto->dni,'dni') !!}</td>
                     <td class="text-center">
-                        @if($inscripto->parientes->count() > 0)
-                            <button wire:click="verParientes('{{ $inscripto->hash_id }}')"
-                                    class="contador">{{ $inscripto->parientes->count() }}</button>
-                        @else
-                            <span>-</span>
-                        @endif
+                        <button wire:click="verParientes('{{ $inscripto->hash_id }}')"
+                                class="contador">{{ $inscripto->parientes_count + 1 }}
+                        </button>
                     </td>
                     <td class="text-center">{{ $inscripto->convenio->nombre }}</td>
                     <td class="text-center">{{ $inscripto->contacto->departamento->nombre ?? '-' }}</td>
+                    <td class="text-right">{{ \App\Helpers\Funciones::mostrarComoMoneda($inscripto->ingresos_totales) }}</td>
                     <td>
                         <flux:dropdown>
                             <flux:button

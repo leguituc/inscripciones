@@ -4,8 +4,8 @@ namespace App\Modules\Inscriptos\Http\Livewire;
 
 use App\Helpers\Funciones;
 use App\Models\Convenio;
-use App\Models\DatoPersonal;
 use App\Models\Departamento;
+use App\Modules\Inscriptos\Services\InscriptoQueryService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -26,11 +26,25 @@ class Index extends Component
 
     // Variables que se usan en el filtro
     public $grupoFamiliarMinimo = 1;
-    public $grupoFamiliarMaximo = 1;
+    public $grupoFamiliarMaximo = 0;
+    public $ingresoMinimo = 0;
+    public $ingresoMaximo = 0; // 0 significa que no hay límite máximo
 
     // Variables bindeadas a los inputs del modal
     public $grupoFamiliarMinimoSeleccionado = 1;
-    public $grupoFamiliarMaximoSeleccionado = 1; //
+    public $grupoFamiliarMaximoSeleccionado = 0;
+    public $ingresoMinimoSeleccionado = 0;
+    public $ingresoMaximoSeleccionado = 0;
+
+    public $perPage = 10;
+
+    // --- Inyección del Servicio ---
+    protected InscriptoQueryService $inscriptoQueryService;
+
+    public function boot(InscriptoQueryService $inscriptoQueryService): void
+    {
+        $this->inscriptoQueryService = $inscriptoQueryService;
+    }
 
     public function mount(): void
     {
@@ -39,6 +53,8 @@ class Index extends Component
 
         $this->grupoFamiliarMinimoSeleccionado = $this->grupoFamiliarMinimo;
         $this->grupoFamiliarMaximoSeleccionado = $this->grupoFamiliarMaximo;
+        $this->ingresoMinimo = $this->ingresoMinimoSeleccionado;
+        $this->ingresoMaximo = $this->ingresoMaximoSeleccionado;
     }
 
     public function render()
@@ -49,74 +65,17 @@ class Index extends Component
 
     public function obtenerInscriptos(): LengthAwarePaginator
     {
-        $query = DatoPersonal::query();
-
-        // --- Joins necesarios para filtros directos o selects ---
-        // Join con users para buscar por nombre/apellido y seleccionar
-        $query->join('users', 'users.id', 'insc_datos_personales.user_id');
-
-        // Left Join con contacto para filtrar por departamento y seleccionar departamento_id
-        $query->leftJoin('insc_datos_contacto', 'insc_datos_personales.id', 'insc_datos_contacto.titular_id');
-
-        // --- Select ---
-        // Selecciona explícitamente las columnas necesarias para evitar ambigüedades
-        $query->select([
-            'insc_datos_personales.id',
-            'insc_datos_personales.user_id',
-            'insc_datos_personales.dni',
-            'insc_datos_personales.convenio_id',
-            'users.apellido',
-            'users.nombre',
-            'insc_datos_contacto.departamento_id'
-        ]);
-
-        $query->when($this->filtro, function ($query) {
-            $query->where(function ($query) {
-                $query->where('insc_datos_personales.dni', 'like', "%{$this->filtro}%")
-                    ->orWhere('users.apellido', 'like', "%{$this->filtro}%")
-                    ->orWhere('users.nombre', 'like', "%{$this->filtro}%");
-            });
-        });
-
-        // --- Carga Eficiente de Relaciones (Eager Loading) ---
-        // Carga las relaciones que vas a *mostrar* en la vista para evitar N+1 queries
-        // No afecta los filtros whereHas/whereIn, pero sí el rendimiento de la vista.
-        $query->with('contacto.departamento', 'convenio','user');
-
-        // Filtramos por Convenio
-        $query->when($this->filtroConvenio, function ($query) {
-            $query->whereIn('insc_datos_personales.convenio_id', $this->filtroConvenio);
-        });
-
-        // Filtramos por departamento
-        $query->when($this->filtroDepartamento, function ($query) {
-            $query->whereIn('insc_datos_contacto.departamento_id', $this->filtroDepartamento);
-        });
-
-        // --- INICIO: Filtro por Grupo Familiar (Cantidad de Parientes) ---
-        // Usa la relación 'parientes' definida en el modelo DatoPersonal
-
-        // Aplicar filtro mínimo si es mayor que 1
-        $query->when($this->grupoFamiliarMinimo > 1, function ($q) {
-            // Filtra los DatoPersonal que tienen al menos 'grupoFamiliarMinimo' parientes asociados.
-            // La relación es 'parientes', no se necesitan condiciones extra (null),
-            // el operador es '>=' y la cuenta es el valor mínimo.
-            $q->whereHas('parientes', null, '>=', $this->grupoFamiliarMinimo);
-        });
-
-        // Aplicar filtro máximo si es mayor que 1 y mayor o igual al mínimo
-        // (El valor 1 se interpreta como "sin límite máximo")
-        $query->when($this->grupoFamiliarMaximo > 1 && $this->grupoFamiliarMaximo >= $this->grupoFamiliarMinimo, function ($q) {
-            // Filtra los DatoPersonal que tienen como máximo 'grupoFamiliarMaximo' parientes asociados.
-            $q->whereHas('parientes', null, '<=', $this->grupoFamiliarMaximo);
-        });
-        // --- FIN: Filtro por Grupo Familiar ---
-
-        // Opcional: Si quieres mostrar el número de parientes en la tabla, puedes añadir withCount
-        // $query->withCount('parientes'); // Esto añadirá un atributo 'parientes_count' a cada resultado DatoPersonal
-
-        // --- Paginación ---
-        return $query->paginate(10);
+        // Delega la lógica de la consulta al servicio
+        return $this->inscriptoQueryService->getFilteredInscriptos(
+            $this->filtro,
+            $this->filtroConvenio,
+            $this->filtroDepartamento,
+            $this->grupoFamiliarMinimo,
+            $this->grupoFamiliarMaximo,
+            $this->ingresoMinimo,
+            $this->ingresoMaximo,
+            $this->perPage
+        );
     }
 
     /**
@@ -131,9 +90,12 @@ class Index extends Component
         $departamentoActivo = count($this->filtroDepartamento) > 0;
         $minimoActivo = $this->grupoFamiliarMinimo > 1;
         $maximoActivo = $this->grupoFamiliarMaximo > 1;
+        $ingresoMinimo = $this->ingresoMinimo > 0;
+        $ingresoMaximo = $this->ingresoMaximo > 0;
 
-        return $convenioActivo || $departamentoActivo || $minimoActivo || $maximoActivo;
+        return $convenioActivo || $departamentoActivo || $minimoActivo || $maximoActivo || $ingresoMinimo || $ingresoMaximo;
     }
+
     public function updatedConvenioSeleccionado(): void
     {
         if ($this->convenioSeleccionado) {
@@ -166,47 +128,135 @@ class Index extends Component
             $this->grupoFamiliarMinimoSeleccionado = 1;
         }
         // Asegurar que max no sea menor que min
-        if ($this->grupoFamiliarMaximoSeleccionado < $this->grupoFamiliarMinimoSeleccionado) {
+        if ($this->grupoFamiliarMaximoSeleccionado != 0 && $this->grupoFamiliarMinimoSeleccionado > $this->grupoFamiliarMaximoSeleccionado) {
             $this->grupoFamiliarMaximoSeleccionado = $this->grupoFamiliarMinimoSeleccionado;
         }
+        //$this->grupoFamiliarMinimo = $this->grupoFamiliarMinimoSeleccionado;
     }
 
     public function updatedGrupoFamiliarMaximoSeleccionado($value): void
     {
-        $max = (int)$value;
-        if ($max < 1) {
-            $this->grupoFamiliarMaximoSeleccionado = 1;
+        $min = (int)$value;
+        if ($min < 1) {
+            $this->grupoFamiliarMaximoSeleccionado = 0;
         }
         // Asegurar que max no sea menor que min
-        if ($this->grupoFamiliarMaximoSeleccionado < $this->grupoFamiliarMinimoSeleccionado) {
-            $this->grupoFamiliarMaximoSeleccionado = $this->grupoFamiliarMinimoSeleccionado;
+        if ($this->grupoFamiliarMaximoSeleccionado != 0) {
+            if ($this->grupoFamiliarMaximoSeleccionado < $this->grupoFamiliarMinimoSeleccionado) {
+                $this->grupoFamiliarMinimoSeleccionado = $this->grupoFamiliarMaximoSeleccionado;
+            }
+        }
+    }
+
+    /**
+     * Valida y normaliza el input del ingreso mínimo en el modal.
+     * Asegura que el máximo seleccionado no sea menor que este nuevo mínimo.
+     */
+    public function updatedIngresoMinimoSeleccionado($value): void
+    {
+        // Intentamos convertir a float. Si no es un número válido o es negativo, poner 0.
+        $minSeleccionado = filter_var($value, FILTER_VALIDATE_FLOAT);
+        if ($minSeleccionado === false || $minSeleccionado < 0) {
+            $this->ingresoMinimoSeleccionado = 0;
+        } else {
+            // Asegurar de que se guarda como float
+            $this->ingresoMinimoSeleccionado = (float)$minSeleccionado;
+        }
+        // --- Aseguramos coherencia: el mínimo no debe ser mayor que el máximo (en el modal) ---
+
+        // Convertir el máximo seleccionado a float para comparar, manejando null/vacío.
+        $maxSeleccionado = filter_var($this->ingresoMaximoSeleccionado, FILTER_VALIDATE_FLOAT);
+        if ($maxSeleccionado && $minSeleccionado > $maxSeleccionado) {
+            $this->ingresoMaximoSeleccionado = $this->ingresoMinimoSeleccionado;
+        }
+    }
+
+
+    /**
+     * Valida y normaliza el input del ingreso máximo en el modal.
+     * Asegura que el mínimo seleccionado no sea mayor que este nuevo máximo.
+     */
+    public function updatedIngresoMaximoSeleccionado($value): void
+    {
+        // Validar y normalizar el máximo ingresado
+        $maxSeleccionado = filter_var($value, FILTER_VALIDATE_FLOAT);
+
+        // Si no es válido o es negativo, podría ser 0 (sin límite) o mantener el valor anterior?
+        // Usemos 0 para indicar "sin límite máximo".
+        if ($maxSeleccionado === false || $maxSeleccionado < 0) {
+            $this->ingresoMaximoSeleccionado = 0;
+            $maxSeleccionado = 0; // Usar 0 para la comparación
+        } else {
+            $this->ingresoMaximoSeleccionado = (float)$maxSeleccionado;
+        }
+
+        // Asegurar coherencia: el mínimo seleccionado no debe ser mayor que el máximo
+        // (a menos que el máximo sea 0, que significa sin límite)
+        $minSeleccionado = filter_var($this->ingresoMinimoSeleccionado, FILTER_VALIDATE_FLOAT);
+        if ($minSeleccionado === false) $minSeleccionado = 0; // Default a 0 si no es válido
+
+        if ($maxSeleccionado > 0 && $minSeleccionado > $maxSeleccionado) {
+            // Si el mínimo actual es mayor que el nuevo máximo (y el máximo no es 0),
+            // ajustar el mínimo para que sea igual al máximo.
+            $this->ingresoMinimoSeleccionado = $this->ingresoMaximoSeleccionado;
         }
     }
 
     public function aplicarFiltroAvanzado(): void
     {
+        $this->filtro = "";
+        // 1. Aplicar filtros de selección múltiple
         $this->filtroConvenio = array_keys($this->conveniosSeleccionados);
         $this->filtroDepartamento = array_keys($this->departamentosSeleccionados);
 
-        // Aplicar los valores seleccionados en el modal a los filtros activos
-        $this->grupoFamiliarMinimo = (int)$this->grupoFamiliarMinimoSeleccionado;
-        $this->grupoFamiliarMaximo = (int)$this->grupoFamiliarMaximoSeleccionado;
+        // 2. Aplicar filtros de rangos (Grupo Familiar)
+        $minGrupo = (int)$this->grupoFamiliarMinimoSeleccionado;
+        $maxGrupo = (int)$this->grupoFamiliarMaximoSeleccionado;
 
-        // Validar que max >= min al aplicar
-        if ($this->grupoFamiliarMaximo < $this->grupoFamiliarMinimo) {
-            $this->grupoFamiliarMaximo = $this->grupoFamiliarMinimo;
-            // Actualizar también la variable del input por consistencia
-            $this->grupoFamiliarMaximoSeleccionado = $this->grupoFamiliarMaximo;
+        // Asegurar que el mínimo real sea al menos 1
+        $this->grupoFamiliarMinimo = max(1, $minGrupo);
+
+        $this->grupoFamiliarMaximo = max(0, $maxGrupo);
+
+        // (Opcional) Actualizar los 'Seleccionado' por si se corrigieron valores
+        $this->grupoFamiliarMinimoSeleccionado = $this->grupoFamiliarMinimo;
+        $this->grupoFamiliarMaximoSeleccionado = $this->grupoFamiliarMaximo;
+
+        // 3. Aplicar filtros de rangos (Ingresos)
+        $minIngreso = filter_var($this->ingresoMinimoSeleccionado, FILTER_VALIDATE_FLOAT);
+        $maxIngreso = filter_var($this->ingresoMaximoSeleccionado, FILTER_VALIDATE_FLOAT);
+
+        // Normalizar mínimo (>= 0)
+        $this->ingresoMinimo = ($minIngreso !== false && $minIngreso >= 0) ? (float)$minIngreso : 0;
+
+        // Normalizar máximo (>= 0, o 0 para sin límite)
+        $this->ingresoMaximo = ($maxIngreso !== false && $maxIngreso >= 0) ? (float)$maxIngreso : 0;
+
+        // Asegurar que max >= min (si max no es "sin límite")
+        if ($this->ingresoMaximo > 0 && $this->ingresoMinimo > $this->ingresoMaximo) {
+            // Si hay inconsistencia al aplicar, igualar max a min
+            $this->ingresoMaximo = $this->ingresoMinimo;
         }
 
-        $this->resetPage(); // Reiniciar paginación al aplicar filtros
+        // (Opcional) Actualizar los 'Seleccionado' por si se corrigieron valores
+        $this->ingresoMinimoSeleccionado = $this->ingresoMinimo;
+        $this->ingresoMaximoSeleccionado = $this->ingresoMaximo;
 
+        // 4. Resetear paginación y cerrar modal
+        $this->resetPage(); // Reiniciar paginación al aplicar filtros
         $this->modal('filtro_avanzado')->close();
     }
 
-    public function resaltar($texto): string|null
+    public function resaltar($texto, $tipo = null): string|null
     {
-        return Funciones::resaltar($texto, $this->filtro);
+        if ($tipo == 'dni') {
+            $valor = (float)$texto;
+            $valor = number_format($valor, 0, ',', '.');
+        } else {
+            $valor = $texto;
+        }
+
+        return Funciones::resaltar($valor, $this->filtro);
     }
 
     public function verParientes($hash_id): void
@@ -256,21 +306,56 @@ class Index extends Component
         // $this->aplicarFiltroAvanzado();
     }
 
+    public function limpiarFiltroIngresoMin(): void
+    {
+        $this->ingresoMinimoSeleccionado = 0;
+        // Revalidar por si el máximo era menor que 0 (imposible con la lógica actual, pero por si acaso)
+        $this->updatedIngresoMinimoSeleccionado(0);
+    }
+
+    public function limpiarFiltroIngresoMax(): void
+    {
+        $this->ingresoMaximoSeleccionado = 0;
+        // Revalidar por si el mínimo era mayor que 0
+        $this->updatedIngresoMaximoSeleccionado(0);
+    }
+
+    /**
+     * Restablece todos los filtros avanzados a sus valores predeterminados.
+     *
+     * Limpia los convenios y departamentos seleccionados, reinicia los rangos
+     * de grupo familiar e ingresos a sus valores iniciales (1 para grupo familiar, 0 para ingresos),
+     * recarga las listas de convenios/departamentos disponibles para los selectores,
+     * resetea la paginación a la primera página y cierra el modal de filtro avanzado.
+     *
+     * @return void No devuelve ningún valor.
+     */
     public function borrarFiltroAvanzado(): void
     {
+        // Limpiar selecciones múltiples
         $this->conveniosSeleccionados = [];
         $this->filtroConvenio = [];
         $this->departamentosSeleccionados = [];
         $this->filtroDepartamento = [];
 
-        // Limpiar filtros de grupo familiar
+        // Limpiar filtros de grupo familiar (activos y seleccionados)
         $this->grupoFamiliarMinimo = 1;
-        $this->grupoFamiliarMaximo = 1;
+        $this->grupoFamiliarMaximo = 0;
         $this->grupoFamiliarMinimoSeleccionado = 1;
-        $this->grupoFamiliarMaximoSeleccionado = 1;
+        $this->grupoFamiliarMaximoSeleccionado = 0;
 
+        // Limpiar filtros de ingresos (activos y seleccionados)
+        $this->ingresoMinimo = 0;
+        $this->ingresoMaximo = 0;
+        $this->ingresoMinimoSeleccionado = 0;
+        $this->ingresoMaximoSeleccionado = 0;
+
+        // Recargar opciones de selects y resetear paginación
         $this->cargarConvenios();
         $this->cargarDepartamentos();
-        $this->resetPage(); // Reiniciar paginación al borrar filtros
+        $this->resetPage();
+
+        // Por si el modal seguía abierto, cerrarlo
+        $this->modal('filtro_avanzado')->close();
     }
 }

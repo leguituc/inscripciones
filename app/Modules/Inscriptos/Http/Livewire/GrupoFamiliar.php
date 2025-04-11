@@ -26,7 +26,7 @@ class GrupoFamiliar extends Component
     {
         $query = Pariente::query();
         $query->where('titular_id', $this->inscripto->id);
-        return $query->paginate(10);
+        return $query->paginate(20);
     }
 
     public function volver()
