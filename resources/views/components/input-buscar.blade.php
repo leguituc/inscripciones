@@ -2,7 +2,7 @@
     <!-- Indicador de carga -->
     <div wire:loading wire:target="filtro" class="self-center">
         <span class="mdi mdi-loading mdi-spin mr-2"></span>
-        <span class="text-sky-900 dark:text-zinc-200 italic">Filtrando...</span>
+        <span class="text-sky-900 dark:text-zinc-200 italic">Procesando...</span>
     </div>
 
     <!-- Input con botón de limpiar -->
